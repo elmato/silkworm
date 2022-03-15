@@ -18,7 +18,7 @@
 
 #include <ethash/hash_types.hpp>
 #include <ethash/keccak.hpp>
-#include <secp256k1_recovery.h>
+#include <secp256k1.h>
 
 namespace silkworm::ecdsa {
 
@@ -50,7 +50,7 @@ std::optional<YParityAndChainId> v_to_y_parity_and_chain_id(const intx::uint256&
     return res;
 }
 
-secp256k1_context* create_context(uint32_t flags) { return secp256k1_context_create(flags); }
+secp256k1_context_t* create_context(uint32_t flags) { return secp256k1_context_create(flags); }
 
 bool is_valid_signature(const intx::uint256& r, const intx::uint256& s, bool homestead) noexcept {
     if (!r || !s) {
@@ -67,8 +67,8 @@ bool is_valid_signature(const intx::uint256& r, const intx::uint256& s, bool hom
 }
 
 std::optional<Bytes> recover(ByteView message, ByteView signature, bool odd_y_parity,
-                             secp256k1_context* context) noexcept {
-    static secp256k1_context* static_context{create_context()};
+                             secp256k1_context_t* context) noexcept {
+    static secp256k1_context_t* static_context{create_context(SECP256K1_CONTEXT_VERIFY | SECP256K1_CONTEXT_SIGN)};
     if (!context) {
         context = static_context;
     }
@@ -76,20 +76,26 @@ std::optional<Bytes> recover(ByteView message, ByteView signature, bool odd_y_pa
     if (message.length() != 32 || signature.length() != 64) {
         return std::nullopt;
     }
-
-    secp256k1_ecdsa_recoverable_signature sig;
-    if (!secp256k1_ecdsa_recoverable_signature_parse_compact(context, &sig, &signature[0], odd_y_parity)) {
-        return std::nullopt;
-    }
-
-    secp256k1_pubkey pub_key;
-    if (!secp256k1_ecdsa_recover(context, &pub_key, &sig, &message[0])) {
-        return std::nullopt;
-    }
-
-    size_t kOutLen{65};
+    
+    int kOutLen{65};
     Bytes out(kOutLen, '\0');
-    secp256k1_ec_pubkey_serialize(context, &out[0], &kOutLen, &pub_key, SECP256K1_EC_UNCOMPRESSED);
+    if (!secp256k1_ecdsa_recover_compact(context, &message[0], &signature[0], &out[0], &kOutLen, 0, odd_y_parity)) {
+        return std::nullopt;
+    }
+
+    // secp256k1_ecdsa_recoverable_signature sig;
+    // if (!secp256k1_ecdsa_recoverable_signature_parse_compact(context, &sig, &signature[0], odd_y_parity)) {
+    //     return std::nullopt;
+    // }
+
+    // secp256k1_pubkey pub_key;
+    // if (!secp256k1_ecdsa_recover(context, &pub_key, &sig, &message[0])) {
+    //     return std::nullopt;
+    // }
+
+    // size_t kOutLen{65};
+    // Bytes out(kOutLen, '\0');
+    // secp256k1_ec_pubkey_serialize(context, &out[0], &kOutLen, &pub_key, SECP256K1_EC_UNCOMPRESSED);
     return out;
 }
 
@@ -103,7 +109,7 @@ std::optional<evmc::address> public_key_to_address(const Bytes& public_key) noex
 }
 
 std::optional<evmc::address> recover_address(ByteView message, ByteView signature, bool odd_y_parity,
-                                             secp256k1_context* context) noexcept {
+                                             secp256k1_context_t* context) noexcept {
     const auto recovered_public_key{recover(message, signature, odd_y_parity, context)};
     return public_key_to_address(recovered_public_key.value_or(Bytes{}));
 }

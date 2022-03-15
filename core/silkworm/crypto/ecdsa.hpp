@@ -22,7 +22,7 @@
 #include <optional>
 
 #include <intx/intx.hpp>
-#include <secp256k1_recovery.h>
+#include <secp256k1.h>
 
 #include <silkworm/common/base.hpp>
 
@@ -61,7 +61,7 @@ bool is_valid_signature(const intx::uint256& r, const intx::uint256& s, bool hom
 //! \param [in] flags : creation flags
 //! \return A raw pointer to context
 //! \remarks Each thread should have its own context
-secp256k1_context* create_context(uint32_t flags = SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
+secp256k1_context_t* create_context(uint32_t flags = SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
 
 //! \brief Tries recover public key used for message signing.
 //! \param [in] message : the signed message
@@ -71,7 +71,7 @@ secp256k1_context* create_context(uint32_t flags = SECP256K1_CONTEXT_SIGN | SECP
 //! \return An optional Bytes. Should it has no value the recovery has failed
 //! This is different from recover_address as the whole 64 bytes are returned.
 std::optional<Bytes> recover(ByteView message, ByteView signature, bool odd_y_parity,
-                             secp256k1_context* context = nullptr) noexcept;
+                             secp256k1_context_t* context = nullptr) noexcept;
 
 //! Tries extract address from recovered public key
 //! \param [in] public_key :  The recovered public key
@@ -85,7 +85,7 @@ std::optional<evmc::address> public_key_to_address(const Bytes& public_key) noex
 //! \param [in] context : a pointer to an existing context. Should it be nullptr a default context is used
 //! \return An optional address value. Should it has no value the recovery has failed
 std::optional<evmc::address> recover_address(ByteView message, ByteView signature, bool odd_y_parity,
-                                             secp256k1_context* context = nullptr) noexcept;
+                                             secp256k1_context_t* context = nullptr) noexcept;
 
 }  // namespace silkworm::ecdsa
 
